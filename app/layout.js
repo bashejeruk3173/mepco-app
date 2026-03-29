@@ -1,3 +1,5 @@
+import './globals.css';
+
 export const metadata = {
   title: 'MEPCO Bill Checker',
   description: 'Instantly check your MEPCO electricity bills',
