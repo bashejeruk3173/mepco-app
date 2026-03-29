@@ -11,12 +11,17 @@ export async function GET(request) {
 
   try {
     const url = "https://bill.pitc.com.pk/mepcobill";
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 8000);
     
     // 1. Fetch tokens
     const getRes = await fetch(url, {
+      method: "GET",
+      signal: controller.signal,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Connection': 'keep-alive'
       }
     });
     
@@ -38,14 +43,18 @@ export async function GET(request) {
     // 2. Fetch actual bill
     const postRes = await fetch(url, {
       method: 'POST',
+      signal: controller.signal,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Content-Type': 'application/x-www-form-urlencoded',
         'Cookie': setCookieHeader,
+        'Connection': 'keep-alive',
         'Referer': url
       },
       body: formData.toString()
     });
+    
+    clearTimeout(id); // Clear timeout since it succeeded!
 
     const htmlPost = await postRes.text();
     const $ = cheerio.load(htmlPost);
@@ -114,6 +123,9 @@ export async function GET(request) {
     });
 
   } catch (err) {
-    return NextResponse.json({ error: 'Failed to scrape bill' }, { status: 500 });
+    if (err.name === 'AbortError') {
+       return NextResponse.json({ error: 'MEPCO Firewall blocked Vercel servers (Timeout). Let us know and we can tell you how to bypass this.' }, { status: 504 });
+    }
+    return NextResponse.json({ error: 'Failed to scrape bill: ' + err.message }, { status: 500 });
   }
 }
